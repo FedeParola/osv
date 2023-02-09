@@ -1,0 +1,1 @@
+conf_drivers_qemu?=1

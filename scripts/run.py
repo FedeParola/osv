@@ -286,6 +286,10 @@ def start_osv_qemu(options):
                         (e.errno, e.strerror, " ".join(args)), file=sys.stderr)
                 sys.exit()
 
+    if options.ivshmem:
+        args += ["-object", "memory-backend-file,size=%s,share=on,mem-path=/dev/shm/ivshmem,id=hostmem" % options.ivshmem]
+        args += ["-device", "ivshmem-plain,memdev=hostmem"]
+
     try:
         # Save the current settings of the stty
         stty_save()
@@ -618,6 +622,8 @@ if __name__ == "__main__":
                         help="static ip addresses (forwarded to respective kernel command line option)")
     parser.add_argument("--bootchart", action="store_true",
                         help="bootchart mode (forwarded to respective kernel command line option")
+    parser.add_argument("--ivshmem", action="store",
+                        help="create a QEMU shared memory device of the given size")
     cmdargs = parser.parse_args()
 
     cmdargs.opt_path = "debug" if cmdargs.debug else "release" if cmdargs.release else "last"
