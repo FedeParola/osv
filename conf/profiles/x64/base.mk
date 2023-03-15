@@ -27,6 +27,11 @@ ifeq ($(conf_drivers_virtio_rng),1)
 export conf_drivers_virtio?=1
 endif
 
+export conf_drivers_virtio_shm_xchg?=0
+ifeq ($(conf_drivers_virtio_shm_xchg),1)
+export conf_drivers_virtio?=1
+endif
+
 export conf_drivers_ahci?=0
 ifeq ($(conf_drivers_ahci),1)
 export conf_drivers_pci?=1

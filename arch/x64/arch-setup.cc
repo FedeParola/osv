@@ -313,6 +313,9 @@ void arch_init_premain()
 #if CONF_drivers_qemu
 #include "drivers/qemu-ivshmem.hh"
 #endif
+#if CONF_drivers_virtio_shm_xchg
+#include "drivers/virtio-shm-xchg.hh"
+#endif
 
 extern bool opt_pci_disabled;
 void arch_init_drivers()
@@ -343,6 +346,9 @@ void arch_init_drivers()
 #endif
 #if CONF_drivers_virtio_scsi
     drvman->register_driver(virtio::scsi::probe);
+#endif
+#if CONF_drivers_virtio_shm_xchg
+    drvman->register_driver(virtio::shm_xchg::probe);
 #endif
 #if CONF_drivers_virtio_net
     drvman->register_driver(virtio::net::probe);

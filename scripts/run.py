@@ -213,14 +213,12 @@ def start_osv_qemu(options):
             elif options.vhost:
                 args += ["-netdev", "tap,id=hn%d,script=%s,vhost=on" % (idx, os.path.join(osv_base, "scripts/qemu-ifup.sh"))]
             else:
-                for bridge_helper_dir in ['/usr/libexec', '/usr/lib/qemu']:
-                    bridge_helper = bridge_helper_dir + '/qemu-bridge-helper'
-                    if os.path.exists(bridge_helper):
-                       break
+                if idx == 1:
+                    # Device 1 is used for h2os, it has vhost acceleration and one queue per vcpu
+                    args += ["-netdev", "tap,id=hn%d,script=%s,vhost=on,queues=%s" % (idx, os.path.join(osv_base, "scripts/qemu-ifup.sh"), options.vcpus)]
+                    net_device_options.extend(['mq=on', 'vectors=%s' % (2*int(options.vcpus) + 1)])
                 else:
-                    print("Unable to find qemu-bridge-helper program", file=sys.stderr)
-                    return
-                args += ["-netdev", "bridge,id=hn%d,br=%s,helper=%s" % (idx, options.bridge, bridge_helper)]
+                    args += ["-netdev", "tap,id=hn%d,script=%s" % (idx, os.path.join(osv_base, "scripts/qemu-ifup.sh"))]
             net_device_options.extend(['netdev=hn%d' % idx, 'id=nic%d' % idx])
         else:
             if options.api:

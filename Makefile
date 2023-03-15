@@ -893,6 +893,7 @@ drivers += drivers/virtio-blk.o
 drivers += drivers/virtio-scsi.o
 drivers += drivers/virtio-rng.o
 drivers += drivers/virtio-fs.o
+drivers += drivers/virtio-shm-xchg.o
 endif
 
 ifeq ($(conf_drivers_vmxnet3),1)
@@ -1975,9 +1976,13 @@ fs_objs += procfs/procfs_vnops.o
 fs_objs += sysfs/sysfs_vnops.o
 fs_objs += zfs/zfs_null_vfsops.o
 
+h2os := net.o
+h2os += sock_queue.o
+
 objects += $(addprefix fs/, $(fs_objs))
 objects += $(addprefix libc/, $(libc))
 objects += $(addprefix musl/src/, $(musl))
+objects += $(addprefix h2os/, $(h2os))
 
 libc_objects_to_hide = $(addprefix $(out)/libc/, $(libc_to_hide))
 $(libc_objects_to_hide): cc-hide-flags = $(cc-hide-flags-$(conf_hide_symbols))
