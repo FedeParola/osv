@@ -41,7 +41,7 @@ struct virtio_net_hdr {
 
 struct virtq_buffer {
     struct virtio_net_hdr net_hdr;
-    struct h2os_pkt pkt;
+    h2os::net::pkt pkt;
 } __attribute__((packed));
 
 class shm_xchg : public virtio_driver {
@@ -52,10 +52,10 @@ public:
     static hw_driver *probe(hw_device* dev);
     static shm_xchg *get_instance() { return _instance; }
     std::string get_name() const override { return _driver_name; }
-    int get_stats(struct h2os_dev_stats *stats);
-    int get_queue_stats(unsigned queue, struct h2os_dev_stats *stats);
+    void get_stats(h2os::net::dev_stats& stats);
+    void get_queue_stats(unsigned queue, h2os::net::dev_stats& stats);
 
-    int xmit_pkt(struct h2os_pkt *pkt);
+    int xmit_pkt(h2os::net::pkt& pkt);
 
 protected:
     u64 get_driver_features() override;
@@ -66,8 +66,8 @@ private:
     public:
         queue(int id, shm_xchg& driver, vring *rx_virtq, vring *tx_virtq);
         ~queue();
-        int xmit_pkt(struct h2os_pkt *pkt);
-        int get_stats(struct h2os_dev_stats *stats);
+        int xmit_pkt(h2os::net::pkt& pkt);
+        void get_stats(h2os::net::dev_stats& stats);
 
     private:
         static const unsigned RX_VIRTQ_SIZE = 256;
@@ -90,7 +90,7 @@ private:
         int _tx_freelist_head;
         // Should make this a unique_ptr but gives me errors
         sched::thread *_poll_task;
-        struct h2os_dev_stats _stats;
+        h2os::net::dev_stats _stats;
 
         void poll_rx();
     };

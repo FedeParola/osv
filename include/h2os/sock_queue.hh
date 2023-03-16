@@ -8,29 +8,38 @@
 #ifndef H2OS_SOCK_QUEUE_HH
 #define H2OS_SOCK_QUEUE_HH
 
+#include <atomic>
 #include <h2os/net.hh>
+#include <osv/wait_record.hh>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace h2os {
+namespace net {
 
-#define SOCK_QUEUE_SIZE 256  // Must be a power of 2
-#define SOCK_QUEUE_MASK (SOCK_QUEUE_SIZE - 1)
+// Could be defined as a nested class of the socket in the future, I'm keeping
+// it as a standalone entity to test it
+class sock_queue {
+public:
+    sock_queue() {};
+    sock_queue(sock_queue&) = delete;
+    bool produce(const shm_desc& desc);
+    void consume(shm_desc& desc);
 
-// MPSC queue
-// Producing is never blocking, if the queue is full the operation fails
-// Consuming can be blocking on an empty queue (can change behaviour at run time
-// or only at init time?)
-// Internal implementation is opaque
-struct sock_queue;
+private:
+    static const int SIZE = 256;
+    static const unsigned long MASK = SIZE - 1;
+    shm_desc _descs[SIZE];
+    //  1 - descriptor available
+    //  0 - descriptor not available
+    // -1 - descriptor not available and consumer waiting/preparing to wait
+    std::atomic_int8_t _desc_available[SIZE];
+    unsigned long _cons_next;      // Next element to be read by the consumer
+    std::atomic_ulong _prod_next;  // Next element to be written by the producer
+    std::atomic_int _count;
+    std::atomic<waiter *> _waitobj;
+    std::atomic_bool _cancel_wait;
+};
 
-struct sock_queue *sock_queue_create();
-void sock_queue_free(struct sock_queue *q);
-int sock_queue_produce(struct sock_queue *q, const struct h2os_shm_desc *desc);
-void sock_queue_consume(struct sock_queue *q, struct h2os_shm_desc *desc);
-
-#ifdef __cplusplus
-}
-#endif
+}  // net
+}  // h2os
 
 #endif  // H2OS_SOCK_QUEUE_HH

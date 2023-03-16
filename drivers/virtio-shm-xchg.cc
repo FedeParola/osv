@@ -98,7 +98,7 @@ shm_xchg::queue::~queue()
     // What has to be cleaned?
 }
 
-int shm_xchg::queue::xmit_pkt(struct h2os_pkt *pkt)
+int shm_xchg::queue::xmit_pkt(h2os::net::pkt& pkt)
 {
     unsigned long buffer_idx;
     uint32_t virtio_len;
@@ -124,11 +124,11 @@ int shm_xchg::queue::xmit_pkt(struct h2os_pkt *pkt)
     // We don't care about the content of the net_hdr since we are not using any
     // net feature.
     // TODO: consider sharing a single net_hdr memory region for all buffers
-    *(struct h2os_pkt *)(buffer + _driver._net_hdr_size) = *pkt;
+    *(h2os::net::pkt *)(buffer + _driver._net_hdr_size) = pkt;
 
     _tx_virtq->init_sg();
     _tx_virtq->add_out_sg(buffer,
-            _driver._net_hdr_size + sizeof(struct h2os_pkt));
+            _driver._net_hdr_size + sizeof(h2os::net::pkt));
     // Since the cookie is technically a pointer, future calls to get_buf_elem()
     // will return nullptr (0) in case of no used buffers. Offset all
     // indexes by 1 so we can distinguish nullptr from idx 0
@@ -161,8 +161,8 @@ void shm_xchg::queue::poll_rx()
                         "shm-xchg: received unexpected message");
             }
 
-            if (h2os_handle_pkt(
-                    (struct h2os_pkt *)(buffer + _driver._net_hdr_size))) {
+            if (h2os::net::handle_pkt(
+                    *(h2os::net::pkt *)(buffer + _driver._net_hdr_size))) {
                 // TODO: handle failing, if pkt could't be handled might
                 // need backpressure
                 _stats.rx_sockq_full++;
@@ -184,27 +184,21 @@ void shm_xchg::queue::poll_rx()
     }
 }
 
-int shm_xchg::queue::get_stats(struct h2os_dev_stats *stats)
+void shm_xchg::queue::get_stats(h2os::net::dev_stats& stats)
 {
-    if (!stats) {
-        return -1;
-    }
-
     // I'm copying each field individually beacuse I'm worried a memcpy could
     // copy some field non atomically (it probably doesn't, just to be sure)
-    stats->rx_pkts = _stats.rx_pkts;
-    stats->rx_sockq_full = _stats.rx_sockq_full;
-    stats->rx_wakeups = _stats.rx_wakeups;
-    stats->tx_pkts = _stats.tx_pkts;
-    stats->tx_errors = _stats.tx_errors;
-
-    return 0;
+    stats.rx_pkts = _stats.rx_pkts;
+    stats.rx_sockq_full = _stats.rx_sockq_full;
+    stats.rx_wakeups = _stats.rx_wakeups;
+    stats.tx_pkts = _stats.tx_pkts;
+    stats.tx_errors = _stats.tx_errors;
 }
 
 shm_xchg *shm_xchg::_instance = nullptr;
 bool shm_xchg::_net_configured = false;
 
-int shm_xchg::xmit_pkt(struct h2os_pkt *pkt)
+int shm_xchg::xmit_pkt(h2os::net::pkt& pkt)
 {
     int ret;
 
@@ -313,30 +307,23 @@ shm_xchg::shm_xchg(virtio_device& dev)
     kprintf("shm-xchg: created device\n");
 }
 
-int shm_xchg::get_stats(struct h2os_dev_stats *stats)
+void shm_xchg::get_stats(h2os::net::dev_stats& stats)
 {
-    if (!stats) {
-        return -1;
-    }
-
-    struct h2os_dev_stats qstats;
-    memset(stats, 0, sizeof(*stats));
+    h2os::net::dev_stats qstats;
     for (auto& q : _queues) {
-        q.get_stats(&qstats);
-        stats->rx_pkts += qstats.rx_pkts;
-        stats->rx_sockq_full += qstats.rx_sockq_full;
-        stats->rx_wakeups += qstats.rx_wakeups;
-        stats->tx_pkts += qstats.tx_pkts;
-        stats->tx_errors += qstats.tx_errors;
+        q.get_stats(qstats);
+        stats.rx_pkts += qstats.rx_pkts;
+        stats.rx_sockq_full += qstats.rx_sockq_full;
+        stats.rx_wakeups += qstats.rx_wakeups;
+        stats.tx_pkts += qstats.tx_pkts;
+        stats.tx_errors += qstats.tx_errors;
     }
-
-    return 0;
 }
 
-int shm_xchg::get_queue_stats(unsigned queue, struct h2os_dev_stats *stats)
+void shm_xchg::get_queue_stats(unsigned queue, h2os::net::dev_stats& stats)
 {
     if (queue >= _queues.size()) {
-        return -1;
+        throw std::runtime_error("Queue doesn't exist");
     }
 
     return _queues[queue].get_stats(stats);
