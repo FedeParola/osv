@@ -14,6 +14,11 @@
 extern "C" {
 #endif
 
+enum h2os_sock_type {
+    H2OS_SOCK_TYPE_CONNECTED,
+    H2OS_SOCK_TYPE_CONNLESS
+};
+
 struct h2os_endpoint {
     uint32_t addr;
     uint16_t port;
@@ -25,7 +30,7 @@ struct h2os_hdr {
     uint32_t daddr;
     uint16_t sport;
     uint16_t dport;
-    uint8_t proto;
+    enum h2os_sock_type type;
 };
 
 // Fields can be shrinked by limiting the size of the shmem and the minimum size
@@ -51,9 +56,12 @@ struct h2os_dev_stats {
     unsigned long tx_errors;
 };
 
-struct h2os_socket *h2os_socket_open();
+struct h2os_socket *h2os_socket_open(enum h2os_sock_type type);
 void h2os_socket_close(struct h2os_socket *s);
 int h2os_socket_bind(struct h2os_socket *s, uint16_t port);
+int h2os_socket_listen(struct h2os_socket *s);
+struct h2os_socket *h2os_socket_accept(struct h2os_socket *s);
+int h2os_socket_connect(struct h2os_socket *s, struct h2os_endpoint dst);
 int h2os_xmit_desc(struct h2os_socket *s, const struct h2os_shm_desc *desc,
         const struct h2os_endpoint *dst);
 int h2os_recv_desc(struct h2os_socket *s, struct h2os_shm_desc *desc,

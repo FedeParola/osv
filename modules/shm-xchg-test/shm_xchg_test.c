@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 		SYSERROR("Error setting SIGINT handler");
 	}
 
-	struct h2os_socket *s = h2os_socket_open();
+	struct h2os_socket *s = h2os_socket_open(H2OS_SOCK_TYPE_CONNLESS);
 	if (!s) {
 		ERROR("Error creating H2OS socket");
 	}
