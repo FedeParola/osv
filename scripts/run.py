@@ -219,7 +219,14 @@ def start_osv_qemu(options):
             if options.tap:
                 args += ["-netdev", "tap,id=hn%d,ifname=%s,script=no,downscript=no" % (idx, options.tap)]
             elif options.vhost:
-                args += ["-netdev", "tap,id=hn%d,script=%s,vhost=on" % (idx, os.path.join(osv_base, "scripts/qemu-ifup.sh"))]
+                if options.ovs_dpdk:
+                    args += ["-object", "memory-backend-file,id=mem,size=1024M,mem-path=/dev/hugepages,share=on"]
+                    args += ["-mem-prealloc"]
+                    args +=	["-numa", "node,memdev=mem"]
+                    args += ["-chardev", "socket,id=char1,path=/usr/local/var/run/openvswitch/%s" % (options.ovs_dpdk)]
+                    args += ["-netdev", "vhost-user,id=hn%d,chardev=char1,vhostforce=on" % (idx)]
+                else:    
+                    args += ["-netdev", "tap,id=hn%d,script=%s,vhost=on" % (idx, os.path.join(osv_base, "scripts/qemu-ifup.sh"))]
             else:
                 for bridge_helper_dir in ['/usr/libexec', '/usr/lib/qemu']:
                     bridge_helper = bridge_helper_dir + '/qemu-bridge-helper'
@@ -626,6 +633,8 @@ if __name__ == "__main__":
                         help="static ip addresses (forwarded to respective kernel command line option)")
     parser.add_argument("--bootchart", action="store_true",
                         help="bootchart mode (forwarded to respective kernel command line option")
+    parser.add_argument("--ovs-dpdk", action="store",
+                        help="attach tap to the given interface of a OvS DPDK vSwitch")
     cmdargs = parser.parse_args()
 
     cmdargs.opt_path = "debug" if cmdargs.debug else "release" if cmdargs.release else "last"
