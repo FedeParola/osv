@@ -82,11 +82,11 @@ class ApiClient(object):
         else:
             self.make_put_call('/drives/rootfs', drive)
 
-    def add_network_interface(self, interface_name, host_interface_name):
+    def add_network_interface(self, interface_name, host_interface_name, mac):
         interface = {
             'iface_id': interface_name,
             'host_dev_name': host_interface_name,
-            'guest_mac': "52:54:00:12:34:56",
+            'guest_mac': mac,
             'rx_rate_limiter': {
                'bandwidth': {
                   'size': 0,
@@ -136,7 +136,7 @@ class ApiClient(object):
         machine_config = {
             'vcpu_count': vcpu_count,
             'mem_size_mib': mem_size_in_mb,
-            'ht_enabled' : False
+            'smt' : False
         }
         if self.socket_less:
             self.firecracker_config['machine-config'] = machine_config
@@ -280,7 +280,7 @@ def main(options):
         cmdline = "--nopci %s" % cmdline
 
     if options.networking:
-        tap_device = 'fc_tap0'
+        tap_device = 'fc_tap0' if options.tap_name == None else options.tap_name
         if not options.bridge:
             tap_ip = '172.16.0.1'
             client_ip = '172.16.0.2'
@@ -316,7 +316,8 @@ def main(options):
         print_time("Added disk")
 
         if options.networking:
-            client.add_network_interface('eth0', 'fc_tap0')
+            client.add_network_interface('eth0', tap_device,
+                                         "52:54:00:12:34:56" if options.mac == None else options.mac)
 
         client.create_instance(options.kernel_path, cmdline)
         print_time("Created OSv VM with cmdline: %s" % cmdline)
@@ -375,6 +376,10 @@ if __name__ == "__main__":
                         help="needs root to setup tap networking first time")
     parser.add_argument("-b", "--bridge", action="store", default=None,
                         help="bridge name for tap networking")
+    parser.add_argument("-t", "--tap-name", action="store", default=None,
+                        help="name of the tap interace")
+    parser.add_argument("-M", "--mac", action="store", default=None,
+                        help="mac address of the tap interace")
     parser.add_argument("-V", "--verbose", action="store_true",
                         help="pass --verbose to OSv, to display more debugging information on the console")
     parser.add_argument("-a", "--api", action="store_true",
